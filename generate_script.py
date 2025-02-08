@@ -1,3 +1,4 @@
+import os
 import openai
 import re
 from search_video import search_video, download_video
