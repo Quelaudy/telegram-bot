@@ -6,7 +6,7 @@ from post_to_youtube import upload_to_youtube
 
 def generate_script(prompt):
     try:
-        openai.api_key = "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"  # Укажите ваш API-ключ
+        os.getenv("OPENAI_API_KEY")
         response = openai.completions.create(
             model="gpt-4o-mini",
             prompt=prompt,
