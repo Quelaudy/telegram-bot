@@ -6,7 +6,7 @@ from search_video import search_video, download_video
 from upload_to_drive import upload_to_google_drive
 from post_to_youtube import upload_to_youtube
 
-TOKEN = "ВАШ_ТЕЛЕГРАМ_ТОКЕН"
+TOKEN = "7809744535:AAGtRvti_cG_A1ufCO-sMwY3f40oBuLhpsA"
 
 # Включаем логирование
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
