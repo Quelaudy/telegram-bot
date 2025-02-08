@@ -2,7 +2,7 @@ import requests
 import random
 import time
 
-PEXELS_API_KEY = "6lKenGdKCM1b8VRCOxJKtNRr7MxSyPIeUaIBtSkJKNRwZQkLjvsVgS08"  # Вставьте свой Pexels API ключ
+PEXELS_API_KEY = os.getenv("PEXELS_API_KEY")  
 
 def search_video(query):
     """
