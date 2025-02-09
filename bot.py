@@ -1,13 +1,15 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, ConversationHandler, filters, CallbackContext
+from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ConversationHandler, CallbackContext
 import os
-from generate_script import generate_video_with_heygen
+
+from generate_script import generate_script_with_together_ai
+from generate_speech import generate_speech_with_elevenlabs
+from generate_video import generate_video_with_heygen
 from upload_to_drive import upload_to_google_drive
 from post_to_youtube import upload_to_youtube
 
-TOKEN = os.getenv("TOKEN")  # Получаем токен бота из переменной окружения
+TOKEN = os.getenv("TOKEN")
 
-# Состояния диалога
 CHOOSING, ENTER_TEXT, ENTER_TITLE, ENTER_DESCRIPTION = range(4)
 
 async def start(update: Update, context: CallbackContext) -> int:
@@ -34,6 +36,11 @@ async def choose_option(update: Update, context: CallbackContext) -> int:
 
 async def handle_text(update: Update, context: CallbackContext) -> int:
     text = update.message.text
+
+    if context.user_data["mode"] == "generate":
+        await update.message.reply_text("📝 Генерирую сценарий через Together AI...")
+        text = generate_script_with_together_ai(text)
+
     context.user_data["text"] = text
     await update.message.reply_text("🔹 Введите заголовок для видео:")
     return ENTER_TITLE
@@ -49,8 +56,15 @@ async def handle_description(update: Update, context: CallbackContext) -> int:
     title = context.user_data["title"]
     description = context.user_data["description"]
 
+    await update.message.reply_text("🎙️ Генерирую голос через ElevenLabs...")
+    voice_path = generate_speech_with_elevenlabs(text)
+
+    if not voice_path:
+        await update.message.reply_text("❌ Ошибка генерации голоса!")
+        return ConversationHandler.END
+
     await update.message.reply_text("🎥 Генерирую видео через HeyGen...")
-    video_path = generate_video_with_heygen(text)
+    video_path = generate_video_with_heygen(text, voice_path)
 
     if not video_path:
         await update.message.reply_text("❌ Ошибка генерации видео!")
