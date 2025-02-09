@@ -12,7 +12,7 @@ def generate_video_with_heygen(script_text, voice_path):
     
     json_data = {
         "text": script_text,
-        "avatar": "your_avatar_id_here",
+        "avatar": "e0b35c4716db486989117cae622a16ae",
     }
 
     response = requests.post(url, headers=headers, json=json_data, files=files)
