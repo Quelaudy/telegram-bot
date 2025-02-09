@@ -36,4 +36,9 @@ def generate_speech_with_elevenlabs(text, voice_id="21m00Tcm4TlvDq8ikWAM"):
         with open(audio_path, "wb") as f:
             f.write(response.content)
         print(f"✅ Аудиофайл сохранен: {audio_path}", flush=True)
-       
+        return audio_path
+    else:
+        error_msg = f"[ERROR] Ошибка генерации голоса: {response.status_code} {response.text}"
+        print(error_msg, flush=True)
+        log_error(error_msg)
+        return None
