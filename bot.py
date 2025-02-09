@@ -63,6 +63,8 @@ async def handle_description(update: Update, context: CallbackContext) -> int:
         await update.message.reply_text("❌ Ошибка генерации голоса!")
         return ConversationHandler.END
 
+    print(f"[DEBUG] Файл голоса: {voice_path}")  # ✅ Проверяем путь к файлу
+
     await update.message.reply_text("🎥 Генерирую видео через HeyGen...")
     video_path = generate_video_with_heygen(text, voice_path)
 
