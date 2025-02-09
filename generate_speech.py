@@ -3,7 +3,7 @@ import requests
 
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
 
-def generate_speech_with_elevenlabs(text, voice_id="pqHfZKP75CvOlQylNhV4 "):
+def generate_speech_with_elevenlabs(text, voice_id="21m00Tcm4TlvDq8ikWAM"):
     """Генерирует аудио с ElevenLabs"""
     url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
     headers = {
@@ -18,12 +18,14 @@ def generate_speech_with_elevenlabs(text, voice_id="pqHfZKP75CvOlQylNhV4 "):
 
     response = requests.post(url, headers=headers, json=json_data)
 
+    print(f"[DEBUG] Запрос к ElevenLabs: {json_data}")
+
     if response.status_code == 200:
         audio_path = "generated_voice.mp3"
         with open(audio_path, "wb") as f:
             f.write(response.content)
-        print(f"✅ Аудио сохранено: {audio_path}")
+        print(f"✅ Аудиофайл сохранен: {audio_path}")
         return audio_path
     else:
-        print("[ERROR] Ошибка генерации голоса:", response.status_code, response.text)
+        print(f"[ERROR] Ошибка генерации голоса: {response.status_code} {response.text}")
         return None
