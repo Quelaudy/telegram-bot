@@ -38,7 +38,7 @@ async def handle_text(update: Update, context: CallbackContext) -> int:
     text = update.message.text
 
     if context.user_data["mode"] == "generate":
-        await update.message.reply_text("📝 Генерирую сценарий через Together AI...")
+        await update.message.reply_text("📝 Генерирую сценарий через CHatGPT...")
         text = generate_script_with_together_ai(text)
 
     context.user_data["text"] = text
