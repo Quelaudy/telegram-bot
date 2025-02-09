@@ -3,7 +3,7 @@ import requests
 
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
 
-def generate_speech_with_elevenlabs(text, voice_id="21m00Tcm4TlvDq8ikWAM"):
+def generate_speech_with_elevenlabs(text, voice_id="pqHfZKP75CvOlQylNhV4 "):
     """Генерирует аудио с ElevenLabs"""
     url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
     headers = {
