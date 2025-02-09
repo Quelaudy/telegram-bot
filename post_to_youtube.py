@@ -26,25 +26,24 @@ def authenticate_youtube():
     return build("youtube", "v3", credentials=creds)
 
 def upload_to_youtube(file_path, title, description):
-    """Загружает видео на YouTube в формате Shorts."""
+    """Загружает видео на YouTube"""
     youtube_service = authenticate_youtube()
+    
     body = {
         'snippet': {
             'title': title,
             'description': description,
-            'tags': ['AI', 'Technology']
+            'tags': ['AI', 'Technology'],
+            'categoryId': '27'
         },
         'status': {
             'privacyStatus': 'public'
-        },
-        'contentDetails': {
-            'duration': 'PT60S',  # Указываем длительность видео (60 секунд для Shorts)
-            'dimension': 'vertical',  # Указываем вертикальный формат (Shorts)
-            'definition': 'hd'  # Указываем качество видео
         }
     }
+
     media = MediaFileUpload(file_path, mimetype='video/mp4')
-    request = youtube_service.videos().insert(part='snippet,status,contentDetails', body=body, media_body=media)
+    request = youtube_service.videos().insert(part='snippet,status', body=body, media_body=media)
     response = request.execute()
-    print(f"Видео загружено: https://www.youtube.com/watch?v={response['id']}")
+    
+    print(f"✅ Видео загружено: https://www.youtube.com/watch?v={response['id']}")
     return response['id']
