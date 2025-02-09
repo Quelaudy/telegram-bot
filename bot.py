@@ -95,13 +95,13 @@ def main():
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
         states={
-            CHOOSING: [CallbackQueryHandler(choose_option, per_message=True)],
+            CHOOSING: [CallbackQueryHandler(choose_option)],  # ❌ Убрали per_message=True
             ENTER_TEXT: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text)],
             ENTER_TITLE: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_title)],
             ENTER_DESCRIPTION: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_description)]
         },
         fallbacks=[],
-        per_message=True
+        per_message=True  # ✅ Добавили сюда
     )
 
     app.add_handler(conv_handler)
