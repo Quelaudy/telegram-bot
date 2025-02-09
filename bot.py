@@ -101,12 +101,14 @@ def main():
             ENTER_DESCRIPTION: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_description)]
         },
         fallbacks=[],
-        per_message=True  # ✅ Добавили сюда
     )
 
     app.add_handler(conv_handler)
+    
     print("✅ Бот запущен...", flush=True)
-    app.run_polling(drop_pending_updates=True)
+
+    # ❗ Запуск с `allowed_updates=Update.ALL_TYPES` для корректной работы
+    app.run_polling(allowed_updates=Update.ALL_TYPES, drop_pending_updates=True)
 
 if __name__ == "__main__":
     main()
