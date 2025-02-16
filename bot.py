@@ -45,13 +45,12 @@ async def choose_option(update: Update, context: CallbackContext):
     query = update.callback_query
     await query.answer()
 
-    # Редактируем исходное сообщение, убираем кнопки
     if query.data == "generate":
         context.user_data["mode"] = "generate"
-        await query.edit_message_text("Введите запрос для генерации сценария:", reply_markup=None)
+        await query.edit_message_text("Введите запрос для генерации сценария:")
     else:
         context.user_data["mode"] = "manual"
-        await query.edit_message_text("Введите текст своего сценария:", reply_markup=None)
+        await query.edit_message_text("Введите текст своего сценария:")
 
     return ENTER_TEXT
 
@@ -87,7 +86,7 @@ async def confirm_upload(update: Update, context: CallbackContext) -> int:
     query = update.callback_query
     await query.answer()
 
-    await query.edit_message_text("📅 Укажите дату и время публикации (формат: ГГГГ-ММ-ДД ЧЧ:ММ)", reply_markup=None)
+    await query.edit_message_text("📅 Укажите дату и время публикации (формат: ГГГГ-ММ-ДД ЧЧ:ММ)")
     return ENTER_UPLOAD_DETAILS
 
 async def enter_upload_details(update: Update, context: CallbackContext) -> int:
@@ -121,10 +120,10 @@ def main():
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("contacts", contacts_command))
 
-    # Добавляем обработчик для кнопок
-    app.add_handler(CallbackQueryHandler(choose_option))
+    app.run_polling()
 
-    app.run_polling(allowed_updates=Update.ALL_TYPES, drop_pending_updates=True, read_timeout=10, write_timeout=10, connect_timeout=10)
+if __name__ == "__main__":
+    main()
 
 if __name__ == "__main__":
     main()
