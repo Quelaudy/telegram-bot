@@ -1,6 +1,7 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ConversationHandler, CallbackContext
 import os
+import datetime
 
 from generate_script import generate_script_with_together_ai
 from generate_speech import generate_speech_with_elevenlabs
@@ -10,16 +11,33 @@ from post_to_youtube import upload_to_youtube
 
 TOKEN = os.getenv("TOKEN")
 
-CHOOSING, ENTER_TEXT, ENTER_TITLE, ENTER_DESCRIPTION = range(4)
+CHOOSING, ENTER_TEXT, ENTER_TITLE, ENTER_DESCRIPTION, CONFIRM_UPLOAD, ENTER_UPLOAD_DETAILS = range(6)
+
+def get_greeting():
+    hour = datetime.datetime.now().hour
+    if 6 <= hour < 12:
+        return "Доброе утро"
+    elif 12 <= hour < 18:
+        return "Добрый день"
+    else:
+        return "Доброй ночи"
 
 async def start(update: Update, context: CallbackContext) -> int:
+    greeting = get_greeting()
     keyboard = [
-        [InlineKeyboardButton("🔹 Сгенерировать текст", callback_data="generate")],
-        [InlineKeyboardButton("✍ Ввести текст вручную", callback_data="manual")]
+        [InlineKeyboardButton("🎬 Сгенерировать сценарий", callback_data="generate")],
+        [InlineKeyboardButton("✍ Написать свой сценарий", callback_data="manual")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text("Выберите способ создания текста:", reply_markup=reply_markup)
+    await update.message.reply_text(f"{greeting}! Вас приветствует телеграм-бот для генерации видео!\nВыберите действие:", reply_markup=reply_markup)
     return CHOOSING
+
+async def help_command(update: Update, context: CallbackContext):
+    greeting = get_greeting()
+    await update.message.reply_text(f"{greeting}! Вас приветствует AI помощник! Чем могу Вам помочь?")
+
+def contacts_command(update: Update, context: CallbackContext):
+    update.message.reply_text("📞 Контакты владельца: example@email.com\n🔧 Сервисный центр: support@example.com")
 
 async def choose_option(update: Update, context: CallbackContext) -> int:
     query = update.callback_query
@@ -30,7 +48,7 @@ async def choose_option(update: Update, context: CallbackContext) -> int:
         await query.edit_message_text("Введите тему видео:")
     else:
         context.user_data["mode"] = "manual"
-        await query.edit_message_text("Введите полный текст для видео:")
+        await query.edit_message_text("Введите полный текст сценария:")
 
     return ENTER_TEXT
 
@@ -38,11 +56,16 @@ async def handle_text(update: Update, context: CallbackContext) -> int:
     text = update.message.text
 
     if context.user_data["mode"] == "generate":
-        await update.message.reply_text("📝 Генерирую сценарий через Together AI...")
+        await update.message.reply_text("📝 Генерирую сценарий...")
         text = generate_script_with_together_ai(text)
 
     context.user_data["text"] = text
-    await update.message.reply_text("🔹 Введите заголовок для видео:")
+    keyboard = [
+        [InlineKeyboardButton("✅ Оставить", callback_data="keep")],
+        [InlineKeyboardButton("✍ Изменить", callback_data="edit")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text(f"Сценарий:\n{text}\n\nХотите оставить или изменить?", reply_markup=reply_markup)
     return ENTER_TITLE
 
 async def handle_title(update: Update, context: CallbackContext) -> int:
@@ -52,41 +75,45 @@ async def handle_title(update: Update, context: CallbackContext) -> int:
 
 async def handle_description(update: Update, context: CallbackContext) -> int:
     context.user_data["description"] = update.message.text
-    text = context.user_data["text"]
+    keyboard = [[InlineKeyboardButton("✅ Подтвердить загрузку", callback_data="confirm_upload")]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text("✅ Видео готово к загрузке. Подтвердите загрузку на YouTube.", reply_markup=reply_markup)
+    return CONFIRM_UPLOAD
+
+async def confirm_upload(update: Update, context: CallbackContext) -> int:
+    query = update.callback_query
+    await query.answer()
+
+    await query.edit_message_text("📅 Укажите дату и время публикации (формат: ГГГГ-ММ-ДД ЧЧ:ММ)")
+    return ENTER_UPLOAD_DETAILS
+
+async def enter_upload_details(update: Update, context: CallbackContext) -> int:
+    context.user_data["upload_time"] = update.message.text
     title = context.user_data["title"]
     description = context.user_data["description"]
+    text = context.user_data["text"]
 
-    print(f"[DEBUG] Текст для генерации голоса: {text}", flush=True)
-
-    await update.message.reply_text("🎙️ Генерирую голос через ElevenLabs...")
-    
+    await update.message.reply_text("🎙️ Генерирую голос...")
     voice_path = generate_speech_with_elevenlabs(text)
-
     if not voice_path:
-        error_msg = "❌ Ошибка генерации голоса! Проверь логи."
-        print(f"[ERROR] {error_msg}", flush=True)
-        await update.message.reply_text(error_msg)
+        await update.message.reply_text("❌ Ошибка генерации голоса!")
         return ConversationHandler.END
 
-    print(f"[DEBUG] Файл сгенерированного голоса: {voice_path}", flush=True)
-
-    await update.message.reply_text("🎥 Генерирую видео через HeyGen...")
+    await update.message.reply_text("🎥 Генерирую видео...")
     video_path = generate_video_with_heygen(text, voice_path)
-
     if not video_path:
-        error_msg = "❌ Ошибка генерации видео!"
-        print(f"[ERROR] {error_msg}", flush=True)
-        await update.message.reply_text(error_msg)
+        await update.message.reply_text("❌ Ошибка генерации видео!")
         return ConversationHandler.END
 
     await update.message.reply_text("☁️ Загружаю на Google Drive...")
-    drive_id = upload_to_google_drive(video_path, "generated_video.mp4")
+    upload_to_google_drive(video_path, "generated_video.mp4")
 
-    await update.message.reply_text("📺 Загружаю на YouTube...")
-    youtube_id = upload_to_youtube(video_path, title, description)
-    youtube_link = f"https://www.youtube.com/watch?v={youtube_id}"
-
-    await update.message.reply_text(f"✅ Видео загружено!\n📺 YouTube: {youtube_link}")
+    keyboard = [
+        [InlineKeyboardButton("✅ Да", callback_data="upload_yes")],
+        [InlineKeyboardButton("❌ Нет", callback_data="upload_no")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text("Выкладываем видео?", reply_markup=reply_markup)
     return ConversationHandler.END
 
 def main():
@@ -95,20 +122,21 @@ def main():
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
         states={
-            CHOOSING: [CallbackQueryHandler(choose_option)],  # ❌ Убрали per_message=True
+            CHOOSING: [CallbackQueryHandler(choose_option)],
             ENTER_TEXT: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text)],
             ENTER_TITLE: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_title)],
-            ENTER_DESCRIPTION: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_description)]
+            ENTER_DESCRIPTION: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_description)],
+            CONFIRM_UPLOAD: [CallbackQueryHandler(confirm_upload)],
+            ENTER_UPLOAD_DETAILS: [MessageHandler(filters.TEXT & ~filters.COMMAND, enter_upload_details)],
         },
         fallbacks=[],
     )
 
     app.add_handler(conv_handler)
-    
-    print("✅ Бот запущен...", flush=True)
+    app.add_handler(CommandHandler("help", help_command))
+    app.add_handler(CommandHandler("contacts", contacts_command))
 
-    # ❗ Запуск с `allowed_updates=Update.ALL_TYPES` для корректной работы
-    app.run_polling(allowed_updates=Update.ALL_TYPES, drop_pending_updates=True)
+    app.run_polling()
 
 if __name__ == "__main__":
     main()
