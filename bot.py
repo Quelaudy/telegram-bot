@@ -14,11 +14,13 @@ TOKEN = os.getenv("TOKEN")
 CHOOSING, ENTER_TEXT, ENTER_TITLE, ENTER_DESCRIPTION, CONFIRM_UPLOAD, ENTER_UPLOAD_DETAILS = range(6)
 
 def get_greeting():
-    hour = datetime.datetime.now().hour
+    hour = (datetime.datetime.utcnow().hour + 5) % 24  # Учитываем UTC+5
     if 6 <= hour < 12:
         return "Доброе утро"
     elif 12 <= hour < 18:
         return "Добрый день"
+    elif 18 <= hour < 22:
+        return "Добрый вечер"
     else:
         return "Доброй ночи"
 
@@ -36,19 +38,20 @@ async def help_command(update: Update, context: CallbackContext):
     greeting = get_greeting()
     await update.message.reply_text(f"{greeting}! Вас приветствует AI помощник! Чем могу Вам помочь?")
 
-def contacts_command(update: Update, context: CallbackContext):
-    update.message.reply_text("📞 Контакты владельца: example@email.com\n🔧 Сервисный центр: support@example.com")
+async def contacts_command(update: Update, context: CallbackContext):
+    await update.message.reply_text("📞 Контакты владельца: example@email.com\n🔧 Сервисный центр: support@example.com")
 
-async def choose_option(update: Update, context: CallbackContext) -> int:
+async def choose_option(update: Update, context: CallbackContext):
     query = update.callback_query
     await query.answer()
 
+    # Редактируем исходное сообщение, убираем кнопки
     if query.data == "generate":
         context.user_data["mode"] = "generate"
-        await query.edit_message_text("Введите тему видео:")
+        await query.edit_message_text("Введите запрос для генерации сценария:", reply_markup=None)
     else:
         context.user_data["mode"] = "manual"
-        await query.edit_message_text("Введите полный текст сценария:")
+        await query.edit_message_text("Введите текст своего сценария:", reply_markup=None)
 
     return ENTER_TEXT
 
@@ -84,7 +87,7 @@ async def confirm_upload(update: Update, context: CallbackContext) -> int:
     query = update.callback_query
     await query.answer()
 
-    await query.edit_message_text("📅 Укажите дату и время публикации (формат: ГГГГ-ММ-ДД ЧЧ:ММ)")
+    await query.edit_message_text("📅 Укажите дату и время публикации (формат: ГГГГ-ММ-ДД ЧЧ:ММ)", reply_markup=None)
     return ENTER_UPLOAD_DETAILS
 
 async def enter_upload_details(update: Update, context: CallbackContext) -> int:
@@ -108,35 +111,20 @@ async def enter_upload_details(update: Update, context: CallbackContext) -> int:
     await update.message.reply_text("☁️ Загружаю на Google Drive...")
     upload_to_google_drive(video_path, "generated_video.mp4")
 
-    keyboard = [
-        [InlineKeyboardButton("✅ Да", callback_data="upload_yes")],
-        [InlineKeyboardButton("❌ Нет", callback_data="upload_no")]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text("Выкладываем видео?", reply_markup=reply_markup)
+    await update.message.reply_text("📺 Видео загружено!")
     return ConversationHandler.END
 
 def main():
     app = Application.builder().token(TOKEN).build()
 
-    conv_handler = ConversationHandler(
-        entry_points=[CommandHandler("start", start)],
-        states={
-            CHOOSING: [CallbackQueryHandler(choose_option)],
-            ENTER_TEXT: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text)],
-            ENTER_TITLE: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_title)],
-            ENTER_DESCRIPTION: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_description)],
-            CONFIRM_UPLOAD: [CallbackQueryHandler(confirm_upload)],
-            ENTER_UPLOAD_DETAILS: [MessageHandler(filters.TEXT & ~filters.COMMAND, enter_upload_details)],
-        },
-        fallbacks=[],
-    )
-
-    app.add_handler(conv_handler)
+    app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("contacts", contacts_command))
 
-    app.run_polling()
+    # Добавляем обработчик для кнопок
+    app.add_handler(CallbackQueryHandler(choose_option))
+
+    app.run_polling(allowed_updates=Update.ALL_TYPES, drop_pending_updates=True, read_timeout=10, write_timeout=10, connect_timeout=10)
 
 if __name__ == "__main__":
     main()
